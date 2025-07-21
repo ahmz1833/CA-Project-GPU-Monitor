@@ -1,0 +1,39 @@
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: gpu-monitor-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+    environment:
+      # Core Configuration
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://${GRAFANA_HOST:-localhost}:${GRAFANA_PORT:-3000}
+      
+      # UI Settings
+      - GF_USERS_DEFAULT_THEME=dark
+      - GF_DEFAULT_TIMEZONE=browser
+      
+      # Security
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SECURITY_COOKIE_SECURE=false
+      
+    restart: unless-stopped
+    networks:
+      - grafana
+      - gpu_logging_network
+
+volumes:
+  grafana_data:
+    driver: local
+
+networks:
+  grafana:
+    driver: bridge
+  gpu_logging_network:
+    external: true
