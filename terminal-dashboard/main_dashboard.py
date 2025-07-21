@@ -5,11 +5,23 @@ import re
 import locale
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
+import argparse
 
-URL = "http://185.176.35.77:9555/gpu/metric?method=sim"
+parser = argparse.ArgumentParser(description="GPU Monitor TUI")
+parser.add_argument("ip_port", type=str, help="Server address in the form IP:PORT")
+parser.add_argument("method", type=str, help="Metric method, e.g., sim")
+args = parser.parse_args()
+
+URL = f"http://{args.ip_port}/gpu/metric?method={args.method}"
+
 METRIC_LINE_RE = re.compile(r'^([\w:]+)\{([^}]*)\}\s+([0-9.eE+-]+)$')
 MAX_DATA_POINTS = 2000
+
+@dataclass
+class GpuProcess:
+    pid: int
+    gpu_memory: Optional[int]
 
 @dataclass
 class GpuData:
@@ -22,9 +34,9 @@ class GpuData:
     power_watts: float = 0.0
     memory_usage_percent: float = 0.0
     health: str = ""
+    processes: List[GpuProcess] = field(default_factory=list)
 
 utilization_history = defaultdict(lambda: deque(maxlen=60))
-
 detailed_view_mode = False
 
 SPARK_CHARS_DENSE = '⠀⡀⡄⡆⡇⣇⣧⣷⣿'
@@ -73,7 +85,8 @@ def get_display_config(width, height):
             'show_graphs': True,
             'show_borders': True,
             'compact_mode': False,
-            'header_style': 'full'
+            'header_style': 'full',
+            'show_processes': True
         }
     elif width >= 80 and height >= 20:
         return {
@@ -84,7 +97,8 @@ def get_display_config(width, height):
             'show_graphs': True,
             'show_borders': True,
             'compact_mode': False,
-            'header_style': 'medium'
+            'header_style': 'medium',
+            'show_processes': True
         }
     elif width >= 60 and height >= 15:
         return {
@@ -95,7 +109,8 @@ def get_display_config(width, height):
             'show_graphs': True,
             'show_borders': False,
             'compact_mode': True,
-            'header_style': 'compact'
+            'header_style': 'compact',
+            'show_processes': False
         }
     else:
         return {
@@ -106,7 +121,8 @@ def get_display_config(width, height):
             'show_graphs': False,
             'show_borders': False,
             'compact_mode': True,
-            'header_style': 'minimal'
+            'header_style': 'minimal',
+            'show_processes': False
         }
 
 def fetch_data():
@@ -117,6 +133,24 @@ def fetch_data():
         return {"data": parse_prometheus_metrics(response.text), "raw": response.text}
     except Exception as e:
         return {"error": str(e), "raw": ""}
+
+def fetch_gpu_processes(gpu_uuid: str) -> List[GpuProcess]:
+    try:
+        url = f"http://{args.ip_port}/gpu/{gpu_uuid}/processes?method=sim"
+        response = requests.get(url, timeout=2)
+        if response.status_code != 200:
+            return []
+
+        processes = []
+        data = response.json()
+        for proc in data.get("processes", []):
+            processes.append(GpuProcess(
+                pid=proc.get("pid", 0),
+                gpu_memory=proc.get("gpu_memory")
+            ))
+        return processes
+    except Exception:
+        return []
 
 def parse_prometheus_metrics(text):
     gpu_metrics = defaultdict(dict)
@@ -132,8 +166,10 @@ def parse_prometheus_metrics(text):
             labels = {k.strip(): v.strip('"') for k, v in labels.items()}
             gpu_name = labels.get("gpu_name", "Unknown")
             gpu_index = labels.get("gpu_index", "?")
+            gpu_uuid = labels.get("uuid", f"gpu_{gpu_index}")
             key = f"{gpu_index} - {gpu_name}"
             gpu_metrics[key][metric] = value
+            gpu_metrics[key]["uuid"] = gpu_uuid
             gpu_metrics[key]["gpu_health"] = labels.get("gpu_health", "")
     return gpu_metrics
 
@@ -189,6 +225,9 @@ def parse_all_gpu_data(raw_data: str, all_gpus: Dict[str, GpuData]) -> None:
             elif metric_name == "gpu_memory_usage_percent":
                 all_gpus[uuid].memory_usage_percent = value
 
+    for uuid, gpu in all_gpus.items():
+        gpu.processes = fetch_gpu_processes(uuid)
+
 def get_utilization_color(util):
     """Get color pair based on utilization percentage"""
     if util >= 90:
@@ -198,7 +237,7 @@ def get_utilization_color(util):
     elif util >= 30:
         return curses.color_pair(1)
     else:
-        return curses.color_pair(4)
+        return curses.color_pair(5)
 
 def draw_header(stdscr, width, config):
     """Draw header based on terminal size"""
@@ -297,6 +336,18 @@ def draw_utilization_graph(stdscr, row, col, gpu_id, util_percent, config):
 
     return row
 
+def format_memory(memory_bytes: Optional[int]) -> str:
+    """Format memory bytes into human-readable string"""
+    if memory_bytes is None:
+        return "N/A"
+    if memory_bytes >= 1024 * 1024 * 1024:
+        return f"{memory_bytes / (1024 * 1024 * 1024):.1f} GB"
+    elif memory_bytes >= 1024 * 1024:
+        return f"{memory_bytes / (1024 * 1024):.1f} MB"
+    elif memory_bytes >= 1024:
+        return f"{memory_bytes / 1024:.1f} KB"
+    return f"{memory_bytes} B"
+
 def draw_gpu_info(stdscr, row, col, gpu_id, metrics, config):
     """Draw GPU information based on display configuration"""
     box_chars = BOX_CHARS[config['size']]
@@ -328,6 +379,7 @@ def draw_gpu_info(stdscr, row, col, gpu_id, metrics, config):
     clock = float(metrics.get("gpu_clock_mhz", 0))
     power = float(metrics.get("gpu_power_watts", 0))
     health = metrics.get("gpu_health", "unknown").lower()
+    gpu_uuid = metrics.get("uuid", "")
 
     utilization_history[gpu_id].append(util)
 
@@ -359,6 +411,28 @@ def draw_gpu_info(stdscr, row, col, gpu_id, metrics, config):
         row += 1
 
     row = draw_utilization_graph(stdscr, row, col, gpu_id, util, config)
+
+    if config['show_processes'] and gpu_uuid:
+        try:
+            processes = fetch_gpu_processes(gpu_uuid)
+            if processes:
+                if config['size'] == 'large':
+                    stdscr.addstr(row, col, f"{prefix}Processes:")
+                    row += 1
+                    for proc in processes[:5]:
+                        mem_str = format_memory(proc.gpu_memory)
+                        stdscr.addstr(row, col, f"{prefix} PID: {proc.pid:6d} | GPU Mem: {mem_str:>8}")
+                        row += 1
+                    if len(processes) > 5:
+                        stdscr.addstr(row, col, f"{prefix}... and {len(processes) - 5} more processes")
+                        row += 1
+                else:
+                    total_mem = sum(p.gpu_memory for p in processes if p.gpu_memory is not None)
+                    mem_str = format_memory(total_mem)
+                    stdscr.addstr(row, col, f"{prefix}Processes: {len(processes)} | Total GPU Mem: {mem_str}")
+                    row += 1
+        except Exception as e:
+            pass
 
     if config['show_borders'] and not config['compact_mode']:
         border_line = box_chars['bottom_left'] + box_chars['horizontal'] * 78 + box_chars['bottom_right']
@@ -452,6 +526,27 @@ def draw_detailed_view(stdscr, all_data: Dict[str, GpuData], last_status: str) -
         except:
             pass
 
+        if gpu.processes:
+            proc_text = "Processes: "
+            for i, proc in enumerate(gpu.processes[:3]):
+                if i > 0:
+                    proc_text += ", "
+                proc_text += f"{proc.pid} ({format_memory(proc.gpu_memory)})"
+            if len(gpu.processes) > 3:
+                proc_text += f" +{len(gpu.processes) - 3} more"
+
+            if len(proc_text) > plot_width - 2:
+                proc_text = proc_text[:plot_width - 2]
+            try:
+                stdscr.attron(curses.color_pair(2))
+            except:
+                pass
+            stdscr.addstr(plot_start_y + 2, plot_start_x, proc_text)
+            try:
+                stdscr.attroff(curses.color_pair(2))
+            except:
+                pass
+
         min_val = 0.0
         max_val = 100.0
 
@@ -460,12 +555,12 @@ def draw_detailed_view(stdscr, all_data: Dict[str, GpuData], last_status: str) -
         except:
             pass
         try:
-            stdscr.vline(plot_start_y + 2, plot_start_x - 1, curses.ACS_VLINE, plot_height)
+            stdscr.vline(plot_start_y + 3, plot_start_x - 1, curses.ACS_VLINE, plot_height)
         except:
             pass
-        stdscr.addstr(plot_start_y + 2, 0, f"{max_val:6.1f}%")
-        stdscr.addstr(plot_start_y + 2 + plot_height // 2, 0, f"{(min_val + max_val) / 2.0:6.1f}%")
-        stdscr.addstr(plot_start_y + 2 + plot_height - 1, 0, f"{min_val:6.1f}%")
+        stdscr.addstr(plot_start_y + 3, 0, f"{max_val:6.1f}%")
+        stdscr.addstr(plot_start_y + 3 + plot_height // 2, 0, f"{(min_val + max_val) / 2.0:6.1f}%")
+        stdscr.addstr(plot_start_y + 3 + plot_height - 1, 0, f"{min_val:6.1f}%")
         try:
             stdscr.attroff(curses.color_pair(3))
         except:
@@ -512,7 +607,7 @@ def draw_detailed_view(stdscr, all_data: Dict[str, GpuData], last_status: str) -
 
                     braille_char = chr(0x2800 | bits)
                     try:
-                        stdscr.addstr(plot_start_y + 2 + y, plot_start_x + x, braille_char)
+                        stdscr.addstr(plot_start_y + 3 + y, plot_start_x + x, braille_char)
                     except:
                         pass
 
