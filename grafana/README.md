@@ -12,7 +12,7 @@ This is a clean, simplified Grafana setup for monitoring GPUs with support for t
 ### 2. Access Grafana
 - **URL**: http://localhost:3000
 - **Username**: `admin` 
-- **Password**: `admin` (or check `.env` file)
+- **Password**: `gpu_monitor_2025` (default, or check `.env` file)
 
 ## 📊 Available Dashboards
 
@@ -46,7 +46,8 @@ GRAFANA_USER=admin
 GRAFANA_PASSWORD=admin
 
 # Prometheus Connection (adjust to your setup)
-PROMETHEUS_HOST=localhost
+# Use 'gpu-logging-prometheus' for container name or 'host.docker.internal' for host network
+PROMETHEUS_HOST=host.docker.internal
 PROMETHEUS_PORT=9090
 ```
 
@@ -108,10 +109,24 @@ docker compose up -d
 ```
 
 ### No Data in Dashboards
-1. Verify Prometheus is running and accessible
-2. Check Prometheus targets: http://localhost:9090/targets
-3. Verify GPU monitoring API is running
-4. Check network connectivity between containers
+1. **Check Prometheus connection**:
+   ```bash
+   # Test from host
+   curl http://localhost:9090/api/v1/targets
+   
+   # Test from Grafana container
+   docker compose exec grafana curl http://gpu-logging-prometheus:9090/api/v1/targets
+   ```
+
+2. **Verify GPU monitoring API is running**:
+   ```bash
+   curl http://localhost:9555/gpu/metric?method=sim
+   ```
+
+3. **Check Grafana datasource**:
+   - Go to Configuration → Data sources → Prometheus
+   - Click "Save & test" to verify connection
+   - Ensure URL is set correctly (auto-configured by start script)
 
 ### Dashboard Issues
 - All dashboards are provisioned automatically
@@ -134,7 +149,6 @@ grafana/
 ├── docker-compose.yml         # Container definition
 ├── start-grafana.sh          # Quick start script
 ├── .env.example              # Configuration template
-└── old/                      # Backup of previous setup
 ```
 
 ## 🔄 Updating Configuration
@@ -142,26 +156,44 @@ grafana/
 ### Change Prometheus Server
 1. Edit `.env` file:
    ```bash
-   PROMETHEUS_HOST=your-prometheus-host
+   # For container-to-container communication
+   PROMETHEUS_HOST=gpu-logging-prometheus
+   
+   # For host network access
+   PROMETHEUS_HOST=host.docker.internal
+   
+   # For remote Prometheus server
+   PROMETHEUS_HOST=your-prometheus-ip
    PROMETHEUS_PORT=9090
    ```
 
-2. Restart Grafana:
+2. **Restart with new configuration**:
    ```bash
-   docker compose restart grafana
+   ./start-grafana.sh
    ```
+   (This will regenerate the datasource configuration automatically)
 
 ### Add Custom Dashboards
 1. Create JSON file in `dashboards/` folder
 2. Restart Grafana to load new dashboard
 3. Or import directly via Grafana UI
 
-## 📝 Notes
+## 📝 Important Notes
 
-- Dashboards support all three collection methods (nvml, bash, sim)
-- Configuration is preserved in Docker volumes
-- Network `gpu_logging_network` connects to main monitoring system
-- Prometheus datasource is auto-configured on startup
+### Data Collection Methods
+- **NVML**: Requires NVIDIA drivers and GPUs (may show errors without proper hardware)
+- **Bash**: Uses nvidia-smi command (requires NVIDIA drivers) 
+- **Simulation**: Always works, generates realistic test data
+
+### Network Configuration
+- Grafana connects to `gpu_logging_network` to reach Prometheus
+- Datasource URL is auto-generated based on `.env` configuration
+- Container-to-container communication uses service names
+
+### Data Persistence
+- Dashboard changes are saved in `grafana_data` Docker volume
+- Datasource configuration is regenerated on each startup
+- `.env` file controls all configuration parameters
 
 ## 🆘 Support
 
