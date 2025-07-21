@@ -51,25 +51,35 @@ groups:
           summary: "GPU High Memory Usage"
           description: "GPU {{ $labels.gpu_name }} ({{ $labels.gpu_index }}) memory usage is {{ $value }}%, which may impact performance"
 
+      - alert: GPUCriticalLowFanSpeed
+        expr: gpu_fan_speed < 500
+        for: 2m
+        labels:
+          severity: critical
+          service: gpu-monitoring
+        annotations:
+          summary: "GPU Critical Low Fan Speed"
+          description: "GPU {{ $labels.gpu_name }} ({{ $labels.gpu_index }}) fan speed is {{ $value }} RPM, which is critically low and may cause overheating"
+
       - alert: GPUHighFanSpeed
-        expr: gpu_fan_speed > 4000
+        expr: gpu_fan_speed > 9000
         for: 5m
         labels:
           severity: warning
           service: gpu-monitoring
         annotations:
-          summary: "GPU High Fan Speed"
-          description: "GPU {{ $labels.gpu_name }} ({{ $labels.gpu_index }}) fan speed is {{ $value }} RPM, indicating high thermal load"
+          summary: "GPU High Fan Speed Warning"
+          description: "GPU {{ $labels.gpu_name }} ({{ $labels.gpu_index }}) fan speed is {{ $value }} RPM, indicating high thermal load or cooling system stress"
 
-      - alert: GPUDown
-        expr: up{job=~"gpu-monitor-backend-.*"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          service: gpu-monitoring
-        annotations:
-          summary: "GPU Monitoring Service Down"
-          description: "GPU monitoring service {{ $labels.job }} on {{ $labels.instance }} is down"
+      # - alert: GPUDown
+      #   expr: up{job=~"gpu-monitor-backend-.*"} == 0
+      #   for: 1m
+      #   labels:
+      #     severity: critical
+      #     service: gpu-monitoring
+      #   annotations:
+      #     summary: "GPU Monitoring Service Down"
+      #     description: "GPU monitoring service {{ $labels.job }} on {{ $labels.instance }} is down"
 
       - alert: GPUHealthIssue
         expr: gpu_health_status > 1
