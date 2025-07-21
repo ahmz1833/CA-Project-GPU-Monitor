@@ -6,11 +6,12 @@ A continuous GPU monitoring tool that fetches metrics from a custom API and stor
 
 ## 🚀 Features
 
-- Fetches GPU list and metadata from a server
+- Fetches GPU list and metadata from a remote API
 - Fetches real-time GPU metrics (temperature, power, utilization, etc.)
 - Creates a separate table for each GPU UUID
 - Continuously logs new data every N seconds
-- Uses SQLite for easy and portable storage
+- Uses SQLite for portable, local storage
+- Exports metrics to CSV files — one per GPU UUID
 
 ---
 
@@ -19,9 +20,7 @@ A continuous GPU monitoring tool that fetches metrics from a custom API and stor
 - Python 3.7+
 - Dependencies listed in `requirements.txt`
 
-Install them with:
+### 🔧 Install Dependencies
 
 ```bash
 pip install -r requirements.txt
-
-
