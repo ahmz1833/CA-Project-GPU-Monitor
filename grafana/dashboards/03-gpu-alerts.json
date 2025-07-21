@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 3,
   "links": [],
   "liveNow": true,
   "panels": [
@@ -36,7 +36,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
@@ -44,8 +46,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -67,8 +68,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "yellow",
@@ -82,8 +82,11 @@
                 }
               },
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           },
@@ -99,8 +102,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "yellow",
@@ -114,8 +116,11 @@
                 }
               },
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           },
@@ -131,8 +136,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "yellow",
@@ -146,8 +150,11 @@
                 }
               },
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           },
@@ -163,8 +170,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "yellow",
@@ -178,8 +184,11 @@
                 }
               },
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           },
@@ -195,24 +204,24 @@
                   {
                     "options": {
                       "0": {
-                        "text": "Healthy",
-                        "color": "green"
+                        "color": "green",
+                        "text": "Healthy"
                       },
                       "1": {
-                        "text": "Caution",
-                        "color": "yellow"
+                        "color": "yellow",
+                        "text": "Caution"
                       },
                       "2": {
-                        "text": "Warning",
-                        "color": "orange"
+                        "color": "orange",
+                        "text": "Warning"
                       },
                       "3": {
-                        "text": "Critical",
-                        "color": "red"
+                        "color": "red",
+                        "text": "Critical"
                       },
                       "4": {
-                        "text": "Unknown",
-                        "color": "purple"
+                        "color": "purple",
+                        "text": "Unknown"
                       }
                     },
                     "type": "value"
@@ -220,8 +229,70 @@
                 ]
               },
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "GPU Name"
+            },
+            "properties": [
+              {
+                "id": "custom.width"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpu_uuid"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 356
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 237
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "GPU ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 324
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Index"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 78
               }
             ]
           }
@@ -235,6 +306,15 @@
       },
       "id": 10,
       "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": [
           {
@@ -243,7 +323,7 @@
           }
         ]
       },
-      "pluginVersion": "9.0.0",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
@@ -300,6 +380,26 @@
       "title": "GPU Status Overview",
       "transformations": [
         {
+          "id": "filterFieldsByName",
+          "options": {
+            "byVariable": false,
+            "include": {
+              "names": [
+                "Time",
+                "gpu_health",
+                "gpu_index",
+                "gpu_name",
+                "gpu_uuid",
+                "Value #Temperature",
+                "Value #Utilization",
+                "Value #Power",
+                "Value #Memory",
+                "Value #Health"
+              ]
+            }
+          }
+        },
+        {
           "id": "merge",
           "options": {}
         },
@@ -308,27 +408,35 @@
           "options": {
             "excludeByName": {
               "__name__": true,
+              "gpu_uuid": false,
               "instance": true,
-              "job": true,
-              "gpu_uuid": true
+              "job": true
             },
+            "includeByName": {},
             "indexByName": {
-              "gpu_name": 0,
-              "gpu_index": 1,
-              "Value #Temperature": 2,
-              "Value #Utilization": 3,
-              "Value #Power": 4,
-              "Value #Memory": 5,
-              "Value #Health": 6
+              "Time": 8,
+              "Value #Health": 7,
+              "Value #Memory": 6,
+              "Value #Power": 5,
+              "Value #Temperature": 3,
+              "Value #Utilization": 4,
+              "__name__": 9,
+              "gpu_health": 10,
+              "gpu_index": 2,
+              "gpu_name": 1,
+              "gpu_uuid": 0,
+              "instance": 11,
+              "job": 12
             },
             "renameByName": {
+              "Value #Health": "Health Status",
+              "Value #Memory": "Memory (%)",
+              "Value #Power": "Power (W)",
               "Value #Temperature": "Temperature (°C)",
               "Value #Utilization": "Utilization (%)",
-              "Value #Power": "Power (W)",
-              "Value #Memory": "Memory (%)",
-              "Value #Health": "Health Status",
+              "gpu_index": "Index",
               "gpu_name": "GPU Name",
-              "gpu_index": "Index"
+              "gpu_uuid": "GPU ID"
             }
           }
         }
@@ -351,8 +459,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -376,19 +483,22 @@
       },
       "id": 11,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": false,
         "showThresholdMarkers": true,
+        "sizing": "auto",
         "text": {}
       },
-      "pluginVersion": "9.0.0",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
@@ -421,8 +531,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -446,19 +555,22 @@
       },
       "id": 12,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": false,
         "showThresholdMarkers": true,
+        "sizing": "auto",
         "text": {}
       },
-      "pluginVersion": "9.0.0",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
@@ -489,8 +601,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -514,19 +625,22 @@
       },
       "id": 13,
       "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
         "showThresholdLabels": false,
         "showThresholdMarkers": true,
+        "sizing": "auto",
         "text": {}
       },
-      "pluginVersion": "9.0.0",
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
@@ -553,17 +667,23 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 30,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 2,
             "pointSize": 5,
@@ -585,8 +705,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -606,8 +725,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "red",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -621,8 +740,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "orange",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -636,8 +755,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "yellow"
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -655,13 +774,16 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
@@ -713,8 +835,9 @@
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 36,
-  "style": "dark",
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 41,
   "tags": [
     "gpu",
     "monitoring",
@@ -725,7 +848,6 @@
     "list": [
       {
         "current": {
-          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -734,7 +856,6 @@
           "uid": "prometheus"
         },
         "definition": "label_values(gpu_temperature_celsius, job)",
-        "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "job",
@@ -745,20 +866,18 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "GPU Alerts & Status",
   "uid": "gpu-alerts",
-  "version": 1,
-  "weekStart": ""
+  "version": 2
 }

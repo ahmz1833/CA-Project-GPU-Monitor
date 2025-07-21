@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 2,
   "links": [],
   "liveNow": true,
   "panels": [
@@ -35,25 +35,31 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Frequency (MHz)",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 17,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
-            "lineInterpolation": "linear",
+            "insertNulls": 3600000,
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": false,
+            "showPoints": "auto",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -67,8 +73,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -84,8 +89,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "blue",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -93,14 +98,14 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*GPU.*"
+              "options": ".*GPU Clock.*"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "green"
+                  "fixedColor": "green",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -116,23 +121,30 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_clock_mhz * 1000000",
-          "legendFormat": "GPU Clock - {{gpu_name}} (Index {{gpu_index}})",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_clock_mhz * 1000000)",
+          "legendFormat": "GPU Clock - {{gpu_name}} ({{gpu_uuid}})",
+          "range": true,
           "refId": "A"
         },
         {
@@ -140,8 +152,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_memory_clock_mhz * 1000000",
-          "legendFormat": "Memory Clock - {{gpu_name}} (Index {{gpu_index}})",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_memory_clock_mhz * 1000000)",
+          "legendFormat": "Memory Clock - {{gpu_name}} ({{gpu_uuid}})",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -160,25 +174,31 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Fan Speed (RPM/%)",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
-            "lineInterpolation": "linear",
+            "insertNulls": 3600000,
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": false,
+            "showPoints": "auto",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -192,8 +212,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -218,23 +237,31 @@
       "id": 6,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull", "max"],
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_fan_speed",
-          "legendFormat": "Fan Speed - {{gpu_name}} (Index {{gpu_index}})",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_fan_speed)",
+          "legendFormat": "Fan Speed - {{gpu_name}} ({{gpu_uuid}})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -253,25 +280,34 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Memory Utilization (%)",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
-            "lineInterpolation": "linear",
+            "insertNulls": 3600000,
+            "lineInterpolation": "smooth",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": false,
+            "showPoints": "auto",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -287,8 +323,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -313,23 +348,31 @@
       "id": 7,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull", "mean"],
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_memory_utilization_percent",
-          "legendFormat": "Memory Utilization - {{gpu_name}} (Index {{gpu_index}})",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_memory_utilization_percent)",
+          "legendFormat": "Memory Utilization - {{gpu_name}} ({{gpu_uuid}})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -348,25 +391,31 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Memory (MiB)",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
-            "lineInterpolation": "linear",
+            "insertNulls": 3600000,
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": false,
+            "showPoints": "auto",
+            "spanNulls": 3600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -380,8 +429,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               }
             ]
           },
@@ -396,17 +444,27 @@
             "properties": [
               {
                 "id": "custom.drawStyle",
-                "value": "points"
+                "value": "line"
               },
               {
-                "id": "custom.pointSize",
-                "value": 3
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
               },
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "gray"
+                  "fixedColor": "gray",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -420,8 +478,8 @@
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "blue",
+                  "mode": "palette-classic"
                 }
               }
             ]
@@ -437,33 +495,31 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_memory_used_mib",
-          "legendFormat": "Used Memory - {{gpu_name}} (Index {{gpu_index}})",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_memory_usage_percent{job=~'$job'})",
+          "legendFormat": "Used Memory - {{gpu_name}} ({{gpu_uuid}})",
+          "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "gpu_memory_total_mib",
-          "legendFormat": "Total Memory - {{gpu_name}} (Index {{gpu_index}})",
-          "refId": "B"
         }
       ],
       "title": "GPU Memory Usage (MiB)",
@@ -481,17 +537,23 @@
             "mode": "thresholds"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Health Status",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 50,
+            "fillOpacity": 30,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
-              "vis": false
+              "vis": false,
+              "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 3,
             "pointSize": 8,
@@ -536,8 +598,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "yellow",
@@ -570,23 +631,30 @@
       "id": 9,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "gpu_health_status",
+          "editorMode": "code",
+          "expr": "sum by (gpu_name, instance, gpu_uuid) (gpu_health_status)",
           "legendFormat": "Health Status - {{gpu_name}} (Index {{gpu_index}})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -594,8 +662,9 @@
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 36,
-  "style": "dark",
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 41,
   "tags": [
     "gpu",
     "monitoring",
@@ -606,7 +675,6 @@
     "list": [
       {
         "current": {
-          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -615,7 +683,6 @@
           "uid": "prometheus"
         },
         "definition": "label_values(gpu_temperature_celsius, gpu_name)",
-        "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "gpu_name",
@@ -626,13 +693,11 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       },
       {
         "current": {
-          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -641,7 +706,6 @@
           "uid": "prometheus"
         },
         "definition": "label_values(gpu_temperature_celsius, job)",
-        "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "job",
@@ -652,20 +716,18 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "GPU Detailed Performance",
   "uid": "gpu-detailed",
-  "version": 1,
-  "weekStart": ""
+  "version": 10
 }

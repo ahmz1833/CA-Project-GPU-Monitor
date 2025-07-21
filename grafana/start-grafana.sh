@@ -53,6 +53,7 @@ echo ""
 
 # Generate Prometheus datasource configuration
 echo "🔧 Generating Prometheus datasource configuration..."
+mkdir -p provisioning/datasources
 cat > provisioning/datasources/prometheus.yml << EOF
 apiVersion: 1
 
