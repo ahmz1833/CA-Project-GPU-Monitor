@@ -613,7 +613,7 @@ def draw_screen(stdscr):
             stdscr.attroff(curses.color_pair(4))
 
         stdscr.refresh()
-        time.sleep(2)
+        time.sleep(1)
 
 if __name__ == "__main__":
     locale.setlocale(locale.LC_ALL, "")
