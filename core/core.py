@@ -419,6 +419,46 @@ class SimMethod:
                 "processes": processes
             }
 
+        def health_query(info):
+            # Simulate health status based on temperature and utilization
+            temp = add_noise(base_temps[info.idx], 0.05)
+            util = add_noise(base_utils[info.idx], 0.2)
+            
+            # Determine health status based on simulated conditions
+            if temp > 80 or util > 95:
+                gpu_health = "Warning"
+                temp_status = "High" if temp > 80 else "Normal"
+                memory_status = "Stressed" if util > 95 else "Stable"
+                overall_health = "Warning"
+            elif temp > 70 or util > 85:
+                gpu_health = "Caution"
+                temp_status = "Elevated" if temp > 70 else "Normal"
+                memory_status = "Heavy" if util > 85 else "Stable"
+                overall_health = "Healthy"
+            else:
+                gpu_health = "Healthy"
+                temp_status = "Normal"
+                memory_status = "Stable"
+                overall_health = "Healthy"
+            
+            return {"health": mk_result(True, {
+                "body": {
+                    "Overall Health": {"value": overall_health},
+                    "GPU": {
+                        "children": {
+                            "0": {
+                                "value": gpu_health,
+                                "children": {
+                                    "Temperature": {"value": temp_status},
+                                    "Memory": {"value": memory_status}
+                                }
+                            }
+                        }
+                    }
+                },
+                "header": ["Health Report"]
+            })}
+
         funcs.update({
             "--name": fixed_attr_query("name", names),
             "--uuid": fixed_attr_query("uuid", uuids),
@@ -437,6 +477,7 @@ class SimMethod:
             "--pciewidth": fixed_attr_query("pciewidth", [16, 8, 4]),
             "--plimit": fixed_attr_query("plimit", [350, 250, 150]),
             "--procs": query_processes,
+            "--health": health_query,
 
             "--ecc": lambda _: {"ecc": mk_result(True, {
                 "ecc_corrected_errors": 0,

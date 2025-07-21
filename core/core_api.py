@@ -60,7 +60,7 @@ def list_gpus(method: str = Query("nvml")):
 @app.get("/gpu/metric")
 def get_gpu_metrics(method: str = Query("nvml")):
 	"""Return only dynamic (time-varying) numeric data, for Prometheus use"""
-	metric_fields = ["--uuid", "--power", "--temp", "--clocks", "--util", "--mem", "--fan"]
+	metric_fields = ["--uuid", "--name", "--power", "--temp", "--clocks", "--util", "--mem", "--fan", "--health"]
 	
 	data = _run_core_py(method, metric_fields)
 	prometheus_lines = []
@@ -87,12 +87,23 @@ def get_gpu_metrics(method: str = Query("nvml")):
 		"# TYPE gpu_memory_usage_percent gauge",
 		"# HELP gpu_fan_speed GPU fan speed",
 		"# TYPE gpu_fan_speed gauge",
+		"# HELP gpu_health_status GPU health status (0=Healthy, 1=Caution, 2=Warning, 3=Critical, 4=Unknown)",
+		"# TYPE gpu_health_status gauge",
 	])
 	
 	# Process each GPU
 	for gpu_idx, gpu_data in data.get("gpus", {}).items():
 		uuid = gpu_data.get("uuid", {}).get("value", "unknown")
-		gpu_labels = f'gpu_uuid="{uuid}",gpu_index="{gpu_idx}"'
+		name = gpu_data.get("name", {}).get("value", "unknown")
+		
+		# Get health status for labels
+		health = gpu_data.get("health", {})
+		overall_health = "unknown"
+		if not health.get("has_error", True) and health.get("value") is not None:
+			health_data = health.get("value", {})
+			overall_health = health_data.get("body", {}).get("Overall Health", {}).get("value", "unknown")
+		
+		gpu_labels = f'gpu_uuid="{uuid}",gpu_index="{gpu_idx}",gpu_name="{name}",gpu_health="{overall_health.lower()}"'
 		
 		# Power
 		power = gpu_data.get("power", {})
@@ -137,7 +148,14 @@ def get_gpu_metrics(method: str = Query("nvml")):
 		fan = gpu_data.get("fan", {})
 		if not fan.get("has_error", True) and fan.get("value") is not None:
 			prometheus_lines.append(f"gpu_fan_speed{{{gpu_labels}}} {fan['value']}")
-	
+		
+		# Health status as a metric
+		if not health.get("has_error", True) and health.get("value") is not None:
+			# Map health status to numeric values
+			health_map = {"healthy": 0, "caution": 1, "warning": 2, "critical": 3}
+			health_value = health_map.get(overall_health.lower(), 4)  # 4 for Unknown
+			prometheus_lines.append(f"gpu_health_status{{{gpu_labels}}} {health_value}")
+
 	return Response(content="\n".join(prometheus_lines) + "\n", media_type="text/plain")
 
 
