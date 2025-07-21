@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import JSONResponse, Response
 from fastapi import Path
 from typing import Optional
+import datetime
 import subprocess
 import json
 
@@ -42,6 +43,74 @@ def _extract_gpu_by_uuid(core_data: dict, target_uuid: str) -> Optional[dict]:
 		if uuid_ and (uuid_.lower() == target_uuid.lower() or f"gpu-{target_uuid.lower()}" == uuid_.lower()):
 			return gpu_data
 	return None
+
+
+
+def _process_gpu_metrics(gpu_idx: str, gpu_data: dict) -> dict:
+	"""Process GPU data into metrics format"""
+	gpu_metrics = {
+		"gpu_index": gpu_idx,
+		"uuid": gpu_data.get("uuid", {}).get("value", "unknown"),
+		"name": gpu_data.get("name", {}).get("value", "unknown"),
+		"metrics": {}
+	}
+	
+	# Power
+	power = gpu_data.get("power", {})
+	if not power.get("has_error", True) and power.get("value") is not None:
+		gpu_metrics["metrics"]["power_watts"] = power["value"]
+	
+	# Temperature
+	temp = gpu_data.get("temp", {})
+	if not temp.get("has_error", True) and temp.get("value") is not None:
+		gpu_metrics["metrics"]["temperature_celsius"] = temp["value"]
+	
+	# Clocks
+	clocks = gpu_data.get("clocks", {})
+	if not clocks.get("has_error", True) and clocks.get("value") is not None:
+		clock_data = clocks["value"]
+		if "gpu_clock_mhz" in clock_data:
+			gpu_metrics["metrics"]["gpu_clock_mhz"] = clock_data["gpu_clock_mhz"]
+		if "memory_clock_mhz" in clock_data:
+			gpu_metrics["metrics"]["memory_clock_mhz"] = clock_data["memory_clock_mhz"]
+	
+	# Utilization
+	util = gpu_data.get("util", {})
+	if not util.get("has_error", True) and util.get("value") is not None:
+		util_data = util["value"]
+		if "gpu_utilization_percent" in util_data:
+			gpu_metrics["metrics"]["gpu_utilization_percent"] = util_data["gpu_utilization_percent"]
+		if "memory_utilization_percent" in util_data:
+			gpu_metrics["metrics"]["memory_utilization_percent"] = util_data["memory_utilization_percent"]
+	
+	# Memory
+	mem = gpu_data.get("mem", {})
+	if not mem.get("has_error", True) and mem.get("value") is not None:
+		mem_data = mem["value"]
+		if "memory_used_mib" in mem_data:
+			gpu_metrics["metrics"]["memory_used_mib"] = mem_data["memory_used_mib"]
+		if "memory_total_mib" in mem_data:
+			gpu_metrics["metrics"]["memory_total_mib"] = mem_data["memory_total_mib"]
+		if "memory_usage_percent" in mem_data:
+			gpu_metrics["metrics"]["memory_usage_percent"] = mem_data["memory_usage_percent"]
+	
+	# Fan
+	fan = gpu_data.get("fan", {})
+	if not fan.get("has_error", True) and fan.get("value") is not None:
+		gpu_metrics["metrics"]["fan_speed"] = fan["value"]
+	
+	# Health status
+	health = gpu_data.get("health", {})
+	if not health.get("has_error", True) and health.get("value") is not None:
+		health_data = health.get("value", {})
+		overall_health = health_data.get("body", {}).get("Overall Health", {}).get("value", "unknown")
+		gpu_metrics["metrics"]["health_status"] = overall_health.lower()
+		
+		# Map health status to numeric values for easy consumption
+		health_map = {"healthy": 0, "caution": 1, "warning": 2, "critical": 3}
+		gpu_metrics["metrics"]["health_status_numeric"] = health_map.get(overall_health.lower(), 4)  # 4 for Unknown
+	
+	return gpu_metrics
 
 
 @app.get("/gpu/list")
@@ -157,6 +226,57 @@ def get_gpu_metrics(method: str = Query("nvml")):
 			prometheus_lines.append(f"gpu_health_status{{{gpu_labels}}} {health_value}")
 
 	return Response(content="\n".join(prometheus_lines) + "\n", media_type="text/plain")
+
+
+@app.get("/gpu/metrics/json")
+def get_gpu_metrics_json(method: str = Query("nvml")):
+	"""Return dynamic (time-varying) numeric data in JSON format with timestamp"""
+	metric_fields = ["--uuid", "--name", "--power", "--temp", "--clocks", "--util", "--mem", "--fan", "--health"]
+	
+	data = _run_core_py(method, metric_fields)
+	
+	# Get current timestamp
+	timestamp = datetime.datetime.now().isoformat()
+	
+	result = {
+		"timestamp": timestamp,
+		"gpus": []
+	}
+	
+	# Process each GPU
+	for gpu_idx, gpu_data in data.get("gpus", {}).items():
+		gpu_metrics = _process_gpu_metrics(gpu_idx, gpu_data)
+		result["gpus"].append(gpu_metrics)
+	
+	return JSONResponse(content=result)
+
+
+@app.get("/gpu/metrics/json/{gpu_uuid}")
+def get_gpu_metrics_json_by_uuid(gpu_uuid: str, method: str = Query("nvml")):
+	"""Return dynamic (time-varying) numeric data for a specific GPU in JSON format with timestamp"""
+	metric_fields = ["--uuid", "--name", "--power", "--temp", "--clocks", "--util", "--mem", "--fan", "--health"]
+	
+	data = _run_core_py(method, metric_fields)
+	
+	# Get current timestamp
+	timestamp = datetime.datetime.now().isoformat()
+	
+	# Find the specific GPU by UUID
+	gpu_data = _extract_gpu_by_uuid(data, gpu_uuid)
+	if not gpu_data:
+		raise HTTPException(status_code=404, detail="GPU not found")
+	
+	# Find the GPU index for this GPU
+	gpu_idx = None
+	for idx, gpu in data.get("gpus", {}).items():
+		if gpu == gpu_data:
+			gpu_idx = idx
+			break
+	
+	gpu_metrics = _process_gpu_metrics(gpu_idx or "unknown", gpu_data)
+	gpu_metrics["timestamp"] = timestamp  # Add timestamp to the response
+	
+	return JSONResponse(content=gpu_metrics)
 
 
 @app.get("/gpu/{gpu_uuid}")
