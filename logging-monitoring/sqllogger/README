@@ -1,0 +1,27 @@
+# GPU Metrics Logger
+
+A continuous GPU monitoring tool that fetches metrics from a custom API and stores them in a local SQLite database. For each GPU UUID, a dedicated table is created and updated with timestamped metrics.
+
+---
+
+## 🚀 Features
+
+- Fetches GPU list and metadata from a server
+- Fetches real-time GPU metrics (temperature, power, utilization, etc.)
+- Creates a separate table for each GPU UUID
+- Continuously logs new data every N seconds
+- Uses SQLite for easy and portable storage
+
+---
+
+## 🛠️ Requirements
+
+- Python 3.7+
+- Dependencies listed in `requirements.txt`
+
+Install them with:
+
+```bash
+pip install -r requirements.txt
+
+
