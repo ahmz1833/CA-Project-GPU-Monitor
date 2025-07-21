@@ -353,7 +353,7 @@ class SimMethod:
         driver_version = "525.00"
 
         base_temps = [45, 55, 65]
-        base_fans = [40, 60, 80]
+        base_fans = [1050, 2400, 9500]  # RPM values: low (critical), normal, high (warning)
         base_power = [100, 200, 300]
         base_gpu_clocks = [2100, 1800, 1500]
         base_mem_clocks = [1100, 900, 700]
