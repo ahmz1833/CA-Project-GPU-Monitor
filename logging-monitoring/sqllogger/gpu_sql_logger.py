@@ -106,9 +106,24 @@ def run_logger(base_url, method, interval_sec, db_name="gpu_monitor.db"):
     print(f"🔧 Method: {method}")
     print(f"⏱️  Interval: {interval_sec} seconds")
     print(f"🗄️  Database: {db_name}")
+    print(f"🎯 Scheduling: Precise time-based intervals")
     print()
+    
+    # Initialize timing
+    next_run_time = time.time()
+    iteration = 0
 
     while True:
+        iteration += 1
+        start_time = time.time()
+        
+        # Calculate if we're running on time
+        time_drift = start_time - next_run_time
+        if abs(time_drift) > 1.0:  # More than 1 second drift
+            drift_status = f" (drift: {time_drift:+.1f}s)" if time_drift != 0 else ""
+        else:
+            drift_status = ""
+        
         try:
             # Fetch GPU list
             gpu_list_url = f"{base_url}/gpu/list?method={method}"
@@ -162,23 +177,47 @@ def run_logger(base_url, method, interval_sec, db_name="gpu_monitor.db"):
                 except Exception as e:
                     warnings.append(f"{gpu.get('name', uuid)}: {e}")
 
-            # Print status
+            # Calculate execution time
+            execution_time = time.time() - start_time
+            
+            # Print status with timing information
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
             if successful_logs > 0:
-                print(f"✅ Logged data for {successful_logs}/{len(gpu_list)} GPUs at {timestamp}")
+                print(f"✅ #{iteration:04d} Logged {successful_logs}/{len(gpu_list)} GPUs at {timestamp} (exec: {execution_time:.2f}s){drift_status}")
             else:
-                print(f"❌ Failed to log data for any GPU at {timestamp}")
+                print(f"❌ #{iteration:04d} Failed to log any GPU at {timestamp} (exec: {execution_time:.2f}s){drift_status}")
             
             # Print warnings if any
             for warning in warnings:
                 print(f"⚠️  {warning}")
                 
+            # Warn if execution is taking too long
+            if execution_time > interval_sec * 0.8:  # More than 80% of interval
+                print(f"⚠️  Execution time ({execution_time:.2f}s) is close to interval ({interval_sec}s)")
+                
         except requests.exceptions.RequestException as e:
-            print(f"🌐 Network error fetching GPU list: {e}")
+            execution_time = time.time() - start_time
+            print(f"🌐 #{iteration:04d} Network error at {time.strftime('%Y-%m-%d %H:%M:%S')} (exec: {execution_time:.2f}s): {e}")
         except Exception as e:
-            print(f"💥 Unexpected error during logging: {e}")
+            execution_time = time.time() - start_time
+            print(f"💥 #{iteration:04d} Unexpected error at {time.strftime('%Y-%m-%d %H:%M:%S')} (exec: {execution_time:.2f}s): {e}")
 
-        time.sleep(interval_sec)
+        # Calculate next run time (precise scheduling)
+        next_run_time += interval_sec
+        current_time = time.time()
+        
+        # Calculate sleep time needed to hit the next scheduled time
+        sleep_time = next_run_time - current_time
+        
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        else:
+            # We're running behind schedule
+            if abs(sleep_time) > interval_sec:
+                # If we're more than one full interval behind, reset the schedule
+                next_run_time = current_time + interval_sec
+                print(f"⚠️  Schedule reset due to {abs(sleep_time):.1f}s delay")
+            # If we're just slightly behind, let it catch up naturally
 
 
 def main():
