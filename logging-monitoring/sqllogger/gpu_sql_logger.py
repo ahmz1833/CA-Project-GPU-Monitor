@@ -24,19 +24,20 @@ def create_gpu_info_table(conn):
     conn.commit()
 
 def insert_into_gpu_info(conn, gpu: Dict):
+    """Insert static GPU information, handling missing fields gracefully"""
     conn.execute('''
         INSERT OR REPLACE INTO gpu_info (uuid, name, serial, vbios, driver, minor, pciegen, pciewidth, plimit)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        gpu["uuid"],
-        gpu["name"],
-        gpu["serial"],
-        gpu["vbios"],
-        gpu["driver"],
-        gpu["minor"],
-        gpu["pciegen"],
-        gpu["pciewidth"],
-        gpu["plimit"]
+        gpu.get("uuid"),
+        gpu.get("name"),
+        gpu.get("serial"),
+        gpu.get("vbios"),
+        gpu.get("driver"),
+        gpu.get("minor"),
+        gpu.get("pciegen"),
+        gpu.get("pciewidth"),
+        gpu.get("plimit")
     ))
     conn.commit()
 
@@ -61,53 +62,121 @@ def create_metrics_table_if_not_exists(conn, uuid: str):
     ''')
     conn.commit()
 
+def safe_get_metric(metrics: Dict, key: str, default_value=None):
+    """Safely get a metric value, return default if missing or None"""
+    return metrics.get(key, default_value)
+
 def insert_metrics(conn, uuid: str, metrics: Dict, timestamp: str):
+    """Insert metrics into database, handling missing values gracefully"""
     sanitized_uuid = quote(uuid, safe="")
+    
+    # Extract metrics safely, using None for missing values
+    values = (
+        timestamp,
+        safe_get_metric(metrics, "power_watts"),
+        safe_get_metric(metrics, "temperature_celsius"),
+        safe_get_metric(metrics, "gpu_clock_mhz"),
+        safe_get_metric(metrics, "memory_clock_mhz"),
+        safe_get_metric(metrics, "gpu_utilization_percent"),
+        safe_get_metric(metrics, "memory_utilization_percent"),
+        safe_get_metric(metrics, "memory_used_mib"),
+        safe_get_metric(metrics, "memory_total_mib"),
+        safe_get_metric(metrics, "memory_usage_percent"),
+        safe_get_metric(metrics, "fan_speed"),
+        safe_get_metric(metrics, "health_status"),
+        safe_get_metric(metrics, "health_status_numeric")
+    )
+    
     conn.execute(f'''
         INSERT OR IGNORE INTO "{sanitized_uuid}" (
             timestamp, power_watts, temperature_celsius, gpu_clock_mhz, memory_clock_mhz,
             gpu_utilization_percent, memory_utilization_percent, memory_used_mib,
             memory_total_mib, memory_usage_percent, fan_speed, health_status, health_status_numeric
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        timestamp,
-        metrics["power_watts"],
-        metrics["temperature_celsius"],
-        metrics["gpu_clock_mhz"],
-        metrics["memory_clock_mhz"],
-        metrics["gpu_utilization_percent"],
-        metrics["memory_utilization_percent"],
-        metrics["memory_used_mib"],
-        metrics["memory_total_mib"],
-        metrics["memory_usage_percent"],
-        metrics["fan_speed"],
-        metrics["health_status"],
-        metrics["health_status_numeric"]
-    ))
+    ''', values)
     conn.commit()
 
 
 def run_logger(base_url, method, interval_sec, db_name="gpu_monitor.db"):
     conn = sqlite3.connect(db_name)
     create_gpu_info_table(conn)
+    
+    print(f"🚀 Starting GPU monitoring logger")
+    print(f"📍 Target: {base_url}")
+    print(f"🔧 Method: {method}")
+    print(f"⏱️  Interval: {interval_sec} seconds")
+    print(f"🗄️  Database: {db_name}")
+    print()
 
     while True:
         try:
+            # Fetch GPU list
             gpu_list_url = f"{base_url}/gpu/list?method={method}"
-            gpu_list = requests.get(gpu_list_url).json()["gpus"]
+            response = requests.get(gpu_list_url, timeout=10)
+            response.raise_for_status()
+            gpu_list = response.json()["gpus"]
+            
+            successful_logs = 0
+            warnings = []
 
             for gpu in gpu_list:
-                insert_into_gpu_info(conn, gpu)
-                uuid = gpu["uuid"]
-                metrics_url = f"{base_url}/gpu/metrics/json/{uuid}?method={method}"
-                data = requests.get(metrics_url).json()
+                try:
+                    # Insert/update GPU static information
+                    insert_into_gpu_info(conn, gpu)
+                    
+                    # Check if GPU has UUID (critical for identification)
+                    uuid = gpu.get("uuid")
+                    if not uuid:
+                        warnings.append(f"GPU missing UUID field, skipping: {gpu}")
+                        continue
+                        
+                    gpu_name = gpu.get("name", "Unknown GPU")
+                    
+                    # Fetch GPU metrics
+                    metrics_url = f"{base_url}/gpu/metrics/json/{uuid}?method={method}"
+                    metrics_response = requests.get(metrics_url, timeout=10)
+                    metrics_response.raise_for_status()
+                    data = metrics_response.json()
 
-                create_metrics_table_if_not_exists(conn, uuid)
-                insert_metrics(conn, uuid, data["metrics"], data["timestamp"])
+                    # Create table if needed
+                    create_metrics_table_if_not_exists(conn, uuid)
+                    
+                    # Check for missing critical metrics and warn
+                    metrics = data["metrics"]
+                    missing_metrics = []
+                    for key in ["power_watts", "temperature_celsius", "gpu_utilization_percent", "fan_speed"]:
+                        if key not in metrics or metrics[key] is None:
+                            missing_metrics.append(key)
+                    
+                    if missing_metrics:
+                        warnings.append(f"{gpu_name}: Missing {', '.join(missing_metrics)}")
+                    
+                    # Insert metrics (with safe handling of missing values)
+                    insert_metrics(conn, uuid, metrics, data["timestamp"])
+                    successful_logs += 1
+                    
+                except requests.exceptions.RequestException as e:
+                    warnings.append(f"{gpu.get('name', uuid)}: Network error - {e}")
+                except KeyError as e:
+                    warnings.append(f"{gpu.get('name', uuid)}: Missing data field - {e}")
+                except Exception as e:
+                    warnings.append(f"{gpu.get('name', uuid)}: {e}")
 
-            print(f"✅ Logged data for {len(gpu_list)} GPUs at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            # Print status
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            if successful_logs > 0:
+                print(f"✅ Logged data for {successful_logs}/{len(gpu_list)} GPUs at {timestamp}")
+            else:
+                print(f"❌ Failed to log data for any GPU at {timestamp}")
+            
+            # Print warnings if any
+            for warning in warnings:
+                print(f"⚠️  {warning}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"🌐 Network error fetching GPU list: {e}")
         except Exception as e:
-            print(f"⚠️ Error during logging: {e}")
+            print(f"💥 Unexpected error during logging: {e}")
 
         time.sleep(interval_sec)
 
