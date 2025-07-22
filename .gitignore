@@ -44,3 +44,6 @@ mongo-data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Fuse files
+.fuse_hidden*
